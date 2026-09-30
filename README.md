@@ -2,7 +2,8 @@
 
 Portable Windows widget showing usage limits for **Claude** (5h session + weekly) and **ChatGPT/Codex** (weekly) at a glance, plus local token counts.
 
-Built on [halimadmech/ai-usage-monitor](https://github.com/halimadmech/ai-usage-monitor) (MIT) — this repo just carries the ready-to-run `AIUsage.exe` (v1.2.0) so it can be cloned to any of my machines.
+Built on [halimadmech/ai-usage-monitor](https://github.com/halimadmech/ai-usage-monitor) (MIT). This repo carries a custom build of `AIUsage.exe`:
+- **Pinned always-on-top** (`ALWAYS_ON_TOP = True` in the source) — the main window stays in front of all other apps while open
 
 ## Setup on a new computer
 
