@@ -57,10 +57,10 @@ ALWAYS_ON_TOP = True          # True pins the window above others, widget-style
 # MINI_BAR_HEIGHT is a fixed CSS height that comfortably fits the two lines; the
 # window is sized to it (× DPI scale) and centered on the taskbar, so the layout
 # never depends on measuring the taskbar height at runtime.
-MINI_WIDTH = 184
-MINI_BAR_HEIGHT = 40
-MINI_EXPANDED_WIDTH = 380
-MINI_EXPANDED_HEIGHT = 378
+MINI_WIDTH = 230
+MINI_BAR_HEIGHT = 54
+MINI_EXPANDED_WIDTH = 560
+MINI_EXPANDED_HEIGHT = 392
 
 # Claude usage endpoint (the same one Claude Code uses). The User-Agent header
 # is REQUIRED; without it the endpoint hard rate-limits. Poll no faster than
@@ -74,6 +74,8 @@ CLAUDE_CREDS = Path.home() / ".claude" / ".credentials.json"
 CLAUDE_LOG_DIR = Path.home() / ".claude" / "projects"
 CODEX_LOG_DIRS = [Path.home() / ".codex" / "sessions", Path.home() / ".codex"]
 CODEX_AUTH = Path.home() / ".codex" / "auth.json"
+OPENCODE_DB = Path.home() / ".local" / "share" / "opencode" / "opencode.db"
+OPENCODE_MONTHLY_BUDGET = 50.0   # soft monthly $ budget; ring fills as cost approaches it
 # Codex limits can be read LIVE (no model call, no quota) by driving the official
 # `codex app-server`'s `account/rateLimits/read` RPC. Polled gently; falls back to
 # the last log snapshot if the codex binary isn't installed.
@@ -725,6 +727,46 @@ def get_codex_view():
 # build cards
 # --------------------------------------------------------------------------
 
+def parse_opencode():
+    """Return list of {ts, tokens, cost} from OpenCode's SQLite session log."""
+    if not OPENCODE_DB.exists():
+        return []
+    try:
+        import sqlite3
+        con = sqlite3.connect(str(OPENCODE_DB))
+        cur = con.cursor()
+        cur.execute("""SELECT time_created,
+                              tokens_input+tokens_output+tokens_cache_read+tokens_cache_write,
+                              cost
+                       FROM session WHERE time_created > 0""")
+        rows = cur.fetchall()
+        con.close()
+        events = []
+        for ts_ms, toks, cost in rows:
+            if ts_ms:
+                ts = datetime.fromtimestamp(ts_ms / 1000, tz=timezone.utc)
+                events.append({"ts": ts, "tokens": int(toks or 0), "cost": float(cost or 0)})
+        return events
+    except Exception:
+        return []
+
+
+def _opencode_stats(events, now):
+    cutoff7  = now - timedelta(days=7)
+    cutoff30 = now - timedelta(days=30)
+    def bucket(cutoff):
+        toks = cost = 0.0
+        for e in events:
+            if e["ts"] >= cutoff:
+                toks += e["tokens"]
+                cost += e["cost"]
+        return {"tokens": int(toks), "cost": round(cost, 4)}
+    w, m = bucket(cutoff7), bucket(cutoff30)
+    pct_used = min(100, round(m["cost"] / OPENCODE_MONTHLY_BUDGET * 100))
+    return {"weekly": w, "monthly": m,
+            "pct_used": pct_used, "budget": OPENCODE_MONTHLY_BUDGET}
+
+
 def _usage_rows(events, now):
     today = now.astimezone().date()
     yest = today - timedelta(days=1)
@@ -757,6 +799,7 @@ def build_cards():
     # snapshot (labelled with its age) when the codex binary isn't installed.
     codex_bars, codex_note, codex_hint, codex_plan = get_codex_view()
 
+    oc_events = parse_opencode()
     cards = [
         {"name": "Claude", "glyph": "claude", "found": CLAUDE_LOG_DIR.exists(),
          "plan": read_claude_plan(), "signed_in": bool(read_claude_token()[0]),
@@ -768,6 +811,8 @@ def build_cards():
          "limits": codex_bars, "hint": codex_hint,
          "usage": _usage_rows(codex, now),
          "limit_note": codex_note, "token_note": "this PC only"},
+        {"name": "OpenCode", "glyph": "opencode", "found": OPENCODE_DB.exists(),
+         "oc": _opencode_stats(oc_events, now)},
     ]
     with _claude_lock:
         fetched = _claude_cache["fetched"]
@@ -788,6 +833,7 @@ PAGE = r"""<!doctype html><html><head><meta charset="utf-8">
    --bg:#f6f7f9;--white:#ffffff;--ink:#0f172a;--soft:#475569;--muted:#64748b;--faint:#94a3b8;
    --line:#e9ecf1;--track:#e8eaee;--blue:#3b82f6;--green:#12b886;--claude:#d97757;
    --cbg:#fcebe4;--cfg:#c26a45;--gbg:#ddf3ec;--gfg:#0e8a67;
+   --purple:#7c3aed;--obg:#ede9fe;--ofg:#5b21b6;
  }
  *{box-sizing:border-box}
  html,body{height:100%;overflow:hidden}
@@ -805,7 +851,7 @@ PAGE = r"""<!doctype html><html><head><meta charset="utf-8">
  .iconbtn:hover{background:#e9edf2;color:var(--soft)}
  main{background:var(--white);display:flex;min-height:0;border-top:1px solid var(--line);position:relative}
  .cols-wrap{display:flex;flex:1;min-height:0;width:100%}
- .upd-pill{position:absolute;top:33%;left:50%;transform:translate(-50%,-50%);
+ .upd-pill{position:absolute;top:33%;left:33%;transform:translate(-50%,-50%);
            background:var(--white);border:1px solid var(--line);border-radius:20px;
            padding:4px 11px;display:flex;align-items:center;gap:5px;
            font-size:11px;color:var(--faint);white-space:nowrap;z-index:2;
@@ -824,6 +870,7 @@ PAGE = r"""<!doctype html><html><head><meta charset="utf-8">
  .badge{font-size:11px;font-weight:600;border-radius:999px;padding:2px 9px;white-space:nowrap}
  .badge.claude{background:var(--cbg);color:var(--cfg)}
  .badge.gpt{background:var(--gbg);color:var(--gfg)}
+ .badge.oc{background:var(--obg);color:var(--ofg)}
  .ringwrap{position:relative;width:min(60cqw,160px);aspect-ratio:1/1}
  .ringwrap svg{display:block;width:100%;height:100%}
  .rcenter{position:absolute;inset:0;display:flex;flex-direction:column;
@@ -917,12 +964,14 @@ PAGE = r"""<!doctype html><html><head><meta charset="utf-8">
    'spawn-failed':'Could not start sign-in. Please try again.'};
  const CLAUDE_SVG='<svg width="30" height="30" viewBox="0 0 24 24" fill="#d97757"><path d="m4.7144 15.9555 4.7174-2.6471.079-.2307-.079-.1275h-.2307l-.7893-.0486-2.6956-.0729-2.3375-.0971-2.2646-.1214-.5707-.1215-.5343-.7042.0546-.3522.4797-.3218.686.0608 1.5179.1032 2.2767.1578 1.6514.0972 2.4468.255h.3886l.0546-.1579-.1336-.0971-.1032-.0972L6.973 9.8356l-2.55-1.6879-1.3356-.9714-.7225-.4918-.3643-.4614-.1578-1.0078.6557-.7225.8803.0607.2246.0607.8925.686 1.9064 1.4754 2.4893 1.8336.3643.3035.1457-.1032.0182-.0728-.164-.2733-1.3539-2.4467-1.445-2.4893-.6435-1.032-.17-.6194c-.0607-.255-.1032-.4674-.1032-.7285L6.287.1335 6.6997 0l.9957.1336.419.3642.6192 1.4147 1.0018 2.2282 1.5543 3.0296.4553.8985.2429.8318.091.255h.1579v-.1457l.1275-1.706.2368-2.0947.2307-2.6957.0789-.7589.3764-.9107.7468-.4918.5828.2793.4797.686-.0668.4433-.2853 1.8517-.5586 2.9021-.3643 1.9429h.2125l.2429-.2429.9835-1.3053 1.6514-2.0643.7286-.8196.85-.9046.5464-.4311h1.0321l.759 1.1293-.34 1.1657-1.0625 1.3478-.8804 1.1414-1.2628 1.7-.7893 1.36.0729.1093.1882-.0183 2.8535-.607 1.5421-.2794 1.8396-.3157.8318.3886.091.3946-.3278.8075-1.967.4857-2.3072.4614-3.4364.8136-.0425.0304.0486.0607 1.5482.1457.6618.0364h1.621l3.0175.2247.7892.522.4736.6376-.079.4857-1.2142.6193-1.6393-.3886-3.825-.9107-1.3113-.3279h-.1822v.1093l1.0929 1.0686 2.0035 1.8092 2.5075 2.3314.1275.5768-.3218.4554-.34-.0486-2.2039-1.6575-.85-.7468-1.9246-1.621h-.1275v.17l.4432.6496 2.3436 3.5214.1214 1.0807-.17.3521-.6071.2125-.6679-.1214-1.3721-1.9246L14.38 17.959l-1.1414-1.9428-.1397.079-.674 7.2552-.3156.3703-.7286.2793-.6071-.4614-.3218-.7468.3218-1.4753.3886-1.9246.3157-1.53.2853-1.9004.17-.6314-.0121-.0425-.1397.0182-1.4328 1.9672-2.1796 2.9446-1.7243 1.8456-.4128.164-.7164-.3704.0667-.6618.4008-.5889 2.386-3.0357 1.4389-1.882.929-1.0868-.0062-.1579h-.0546l-6.3385 4.1164-1.1293.1457-.4857-.4554.0608-.7467.2307-.2429 1.9064-1.3114Z"/></svg>';
  const OPENAI_SVG='<svg width="31" height="31" viewBox="0 0 256 260" fill="#10a37f"><path d="M239.183914,106.202783 C245.054304,88.5242096 243.02228,69.1733805 233.607599,53.0998864 C219.451678,28.4588021 190.999703,15.7836129 163.213007,21.739505 C147.554077,4.32145883 123.794909,-3.42398554 100.87901,1.41873898 C77.9631105,6.26146349 59.3690093,22.9572536 52.0959621,45.2214219 C33.8436494,48.9644867 18.0901721,60.392749 8.86672513,76.5818033 C-5.443491,101.182962 -2.19544431,132.215255 16.8986662,153.320094 C11.0060865,170.990656 13.0197283,190.343991 22.4238231,206.422991 C36.5975553,231.072344 65.0680342,243.746566 92.8695738,237.783372 C105.235639,251.708249 123.001113,259.630942 141.623968,259.52692 C170.105359,259.552169 195.337611,241.165718 204.037777,214.045661 C222.28734,210.296356 238.038489,198.869783 247.267014,182.68528 C261.404453,158.127515 258.142494,127.262775 239.183914,106.202783 L239.183914,106.202783 Z M141.623968,242.541207 C130.255682,242.559177 119.243876,238.574642 110.519381,231.286197 L112.054146,230.416496 L163.724595,200.590881 C166.340648,199.056444 167.954321,196.256818 167.970781,193.224005 L167.970781,120.373788 L189.815614,133.010026 C190.034132,133.121423 190.186235,133.330564 190.224885,133.572774 L190.224885,193.940229 C190.168603,220.758427 168.442166,242.484864 141.623968,242.541207 Z M37.1575749,197.93062 C31.456498,188.086359 29.4094818,176.546984 31.3766237,165.342426 L32.9113895,166.263285 L84.6329973,196.088901 C87.2389349,197.618207 90.4682717,197.618207 93.0742093,196.088901 L156.255402,159.663793 L156.255402,184.885111 C156.243557,185.149771 156.111725,185.394602 155.89729,185.550176 L103.561776,215.733903 C80.3054953,229.131632 50.5924954,221.165435 37.1575749,197.93062 Z M23.5493181,85.3811273 C29.2899861,75.4733097 38.3511911,67.9162648 49.1287482,64.0478825 L49.1287482,125.438515 C49.0891492,128.459425 50.6965386,131.262556 53.3237748,132.754232 L116.198014,169.025864 L94.3531808,181.662102 C94.1132325,181.789434 93.8257461,181.789434 93.5857979,181.662102 L41.3526015,151.529534 C18.1419426,138.076098 10.1817681,108.385562 23.5493181,85.125333 L23.5493181,85.3811273 Z M203.0146,127.075598 L139.935725,90.4458545 L161.7294,77.8607748 C161.969348,77.7334434 162.256834,77.7334434 162.496783,77.8607748 L214.729979,108.044502 C231.032329,117.451747 240.437294,135.426109 238.871504,154.182739 C237.305714,172.939368 225.050719,189.105572 207.414262,195.67963 L207.414262,134.288998 C207.322521,131.276867 205.650697,128.535853 203.0146,127.075598 Z M224.757116,94.3850867 L223.22235,93.4642272 L171.60306,63.3828173 C168.981293,61.8443751 165.732456,61.8443751 163.110689,63.3828173 L99.9806554,99.8079259 L99.9806554,74.5866077 C99.9533004,74.3254088 100.071095,74.0701869 100.287609,73.9215426 L152.520805,43.7889738 C168.863098,34.3743518 189.174256,35.2529043 204.642579,46.0434841 C220.110903,56.8340638 227.949269,75.5923959 224.757116,94.1804513 L224.757116,94.3850867 Z M88.0606409,139.097931 L66.2158076,126.512851 C65.9950399,126.379091 65.8450965,126.154176 65.8065367,125.898945 L65.8065367,65.684966 C65.8314495,46.8285367 76.7500605,29.6846032 93.8270852,21.6883055 C110.90411,13.6920079 131.063833,16.2835462 145.5632,28.338998 L144.028434,29.2086986 L92.3579852,59.0343142 C89.7419327,60.5687513 88.1282597,63.3683767 88.1117998,66.4011901 L88.0606409,139.097931 Z M99.9294965,113.5185 L128.06687,97.3011417 L156.255402,113.5185 L156.255402,145.953218 L128.169187,162.170577 L99.9806554,145.953218 L99.9294965,113.5185 Z"/></svg>';
+ const OPENCODE_SVG='<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>';
  const C=2*Math.PI*86;
  let lastData=null,nextSecs=null,sized=false;
  const $=id=>document.getElementById(id);
  const panel=$('panel'),welcome=$('welcome');
  function fmtTime(s){const m=String(s||'').match(/(\d{1,2}:\d{2})(?::\d{2})?\s*$/);return m?m[1]:'—';}
  function fmtCd(s){s=Math.max(0,s);const m=Math.floor(s/60),ss=s%60;return m>0?(m+'m '+ss+'s'):(ss+'s');}
+ function fmtCost(v){return v>=100?'$'+Math.round(v):v>=10?'$'+v.toFixed(1):'$'+v.toFixed(2);}
  function ringSVG(pct,color){
    const off=C*(1-Math.max(0,Math.min(100,pct))/100);
    return '<div class="ringwrap"><svg viewBox="0 0 200 200">'+
@@ -931,38 +980,62 @@ PAGE = r"""<!doctype html><html><head><meta charset="utf-8">
      'stroke-dasharray="'+C.toFixed(2)+'" stroke-dashoffset="'+off.toFixed(2)+'" transform="rotate(-90 100 100)"/>'+
      '</svg><div class="rcenter"><div class="pct">'+pct+'%</div><div class="left">left</div></div></div>';
  }
+ function costRingSVG(pctUsed,color,costStr){
+   const off=C*(1-Math.max(0,Math.min(100,pctUsed))/100);
+   return '<div class="ringwrap"><svg viewBox="0 0 200 200">'+
+     '<circle cx="100" cy="100" r="86" fill="none" stroke="#e8eaee" stroke-width="19"/>'+
+     '<circle cx="100" cy="100" r="86" fill="none" stroke="'+color+'" stroke-width="19" stroke-linecap="round" '+
+     'stroke-dasharray="'+C.toFixed(2)+'" stroke-dashoffset="'+off.toFixed(2)+'" transform="rotate(-90 100 100)"/>'+
+     '</svg><div class="rcenter"><div class="pct" style="font-size:clamp(20px,10cqw,36px)">'+costStr+'</div><div class="left">30d</div></div></div>';
+ }
  function secRow(l,color){
    return '<div class="sec"><div class="sbar"><div class="sfill" style="width:'+l.percent_left+'%;background:'+color+'"></div></div>'+
      '<div class="st">'+l.label+' · '+l.percent_left+'% left'+(l.resets?(' · '+l.resets):'')+'</div></div>';
  }
  function colHTML(c){
+   const isOC=c.glyph==='opencode';
    const isClaude=c.glyph==='claude';
-   const color=isClaude?'#3b82f6':'#12b886';
-   const name=isClaude?'Claude':'ChatGPT';
-   let badge=c.plan||'';if(!isClaude)badge=badge.replace(/^ChatGPT\s+/i,'');
-   let h='<div class="col"><div class="chead">'+(isClaude?CLAUDE_SVG:OPENAI_SVG)+
-     '<span class="nm">'+name+'</span>'+(badge?('<span class="badge '+(isClaude?'claude':'gpt')+'">'+badge+'</span>'):'')+'</div><div class="cbody">';
-   const ls=c.limits||[];
-   let main=null,second=null;
-   if(isClaude){main=ls.find(l=>/session/i.test(l.label))||ls[0]||null;
-     if(main)second=ls.find(l=>l!==main)||null;}
-   else{main=ls[0]||null;second=ls[1]||null;}
-   if(main){
-     h+=ringSVG(main.percent_left,color);
-     h+='<div class="caption">'+(isClaude?'5h session':'weekly')+'</div>';
-     h+='<div class="reset">Resets in<b>'+(main.resets||'—')+'</b></div>';
-     if(second)h+=secRow(second,color);
+   const color=isClaude?'#3b82f6':isOC?'#7c3aed':'#12b886';
+   const name=isClaude?'Claude':isOC?'OpenCode':'ChatGPT';
+   let badge=c.plan||'';if(!isClaude&&!isOC)badge=badge.replace(/^ChatGPT\s+/i,'');
+   const logo=isClaude?CLAUDE_SVG:isOC?OPENCODE_SVG:OPENAI_SVG;
+   const badgeCls=isClaude?'claude':isOC?'oc':'gpt';
+   let h='<div class="col"><div class="chead">'+logo+
+     '<span class="nm">'+name+'</span>'+(badge?('<span class="badge '+badgeCls+'">'+badge+'</span>'):'')+'</div><div class="cbody">';
+   if(isOC){
+     const oc=c.oc||{};
+     const mc=oc.monthly&&oc.monthly.cost||0;
+     const wc=oc.weekly&&oc.weekly.cost||0;
+     const mt=oc.monthly&&oc.monthly.tokens||0;
+     const wt=oc.weekly&&oc.weekly.tokens||0;
+     h+=costRingSVG(oc.pct_used||0,color,fmtCost(mc));
+     h+='<div class="caption">of $'+((oc.budget||50).toFixed(0))+' budget</div>';
+     h+='<div class="tok" style="margin-top:8px">'+
+       '<div class="tokrow"><span>Weekly</span><b>'+fmtCost(wc)+(wt>0?' · '+ftok(wt):'')+'</b></div>'+
+       '<div class="tokrow"><span>Monthly</span><b>'+fmtCost(mc)+(mt>0?' · '+ftok(mt):'')+'</b></div></div>';
    }else{
-     h+='<div class="msg">'+(NOTE[c.hint]||'Limits unavailable.')+'</div>';
-     if(isClaude&&(c.hint==='no-login'||c.hint==='expired')){
-       h+='<button class="cbtn" onclick="connectClaude(this)">Connect Claude</button>';
+     const ls=c.limits||[];
+     let main=null,second=null;
+     if(isClaude){main=ls.find(l=>/session/i.test(l.label))||ls[0]||null;
+       if(main)second=ls.find(l=>l!==main)||null;}
+     else{main=ls[0]||null;second=ls[1]||null;}
+     if(main){
+       h+=ringSVG(main.percent_left,color);
+       h+='<div class="caption">'+(isClaude?'5h session':'weekly')+'</div>';
+       h+='<div class="reset">Resets in<b>'+(main.resets||'—')+'</b></div>';
+       if(second)h+=secRow(second,color);
+     }else{
+       h+='<div class="msg">'+(NOTE[c.hint]||'Limits unavailable.')+'</div>';
+       if(isClaude&&(c.hint==='no-login'||c.hint==='expired')){
+         h+='<button class="cbtn" onclick="connectClaude(this)">Connect Claude</button>';
+       }
      }
+     const u=c.usage||{};
+     const tw=(u['Last 7 Days']&&u['Last 7 Days'].tokens>0)?ftok(u['Last 7 Days'].tokens):'—';
+     const tm=(u['Last 30 Days']&&u['Last 30 Days'].tokens>0)?ftok(u['Last 30 Days'].tokens):'—';
+     h+='<div class="tok"><div class="tokrow"><span>Weekly</span><b>'+tw+'</b></div>'+
+        '<div class="tokrow"><span>Monthly</span><b>'+tm+'</b></div></div>';
    }
-   const u=c.usage||{};
-   const tw=(u['Last 7 Days']&&u['Last 7 Days'].tokens>0)?ftok(u['Last 7 Days'].tokens):'—';
-   const tm=(u['Last 30 Days']&&u['Last 30 Days'].tokens>0)?ftok(u['Last 30 Days'].tokens):'—';
-   h+='<div class="tok"><div class="tokrow"><span>Weekly</span><b>'+tw+'</b></div>'+
-      '<div class="tokrow"><span>Monthly</span><b>'+tm+'</b></div></div>';
    return h+'</div></div>';
  }
  async function connectClaude(btn){
@@ -1083,19 +1156,22 @@ PAGE_MINI = r"""<!doctype html><html><head><meta charset="utf-8">
  body.open #compact{top:auto;height:__BARH__px}
  #compact.locked{cursor:default}
  .mrow{display:flex;align-items:center;gap:6px;font-size:10px;font-weight:600;line-height:1.15}
- .mname{width:42px;color:#aeb6c2}
+ .mname{width:62px;color:#aeb6c2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
  .mbar{flex:1;height:4px;background:rgba(255,255,255,.16);border-radius:4px;overflow:hidden}
- .mfill{height:100%;background:#4c8dff}
+ .mfill{display:block;height:100%;background:#4c8dff;border-radius:4px}
  .mpct{width:30px;text-align:right;color:#fff}
 </style></head><body>
  <div id="full"></div>
  <div id="compact">
    <div class="mrow"><span class="mname">Claude</span>
-     <span class="mbar"><span class="mfill" id="cf" style="width:0%"></span></span>
-     <span class="mpct" id="cp">--</span></div>
+     <span class="mbar"><span class="mfill" id="cf" style="width:0%;background:#4c8dff"></span></span>
+     <span class="mpct" id="cp" style="color:#6eb3ff">--</span></div>
    <div class="mrow"><span class="mname">Codex</span>
-     <span class="mbar"><span class="mfill" id="xf" style="width:0%"></span></span>
-     <span class="mpct" id="xp">--</span></div>
+     <span class="mbar"><span class="mfill" id="xf" style="width:0%;background:#12b886"></span></span>
+     <span class="mpct" id="xp" style="color:#34d399">--</span></div>
+   <div class="mrow"><span class="mname" style="color:#a78bfa">OpenCode</span>
+     <span class="mbar"><span class="mfill" id="of" style="width:0%;background:#7c3aed"></span></span>
+     <span class="mpct" id="op" style="color:#a78bfa">--</span></div>
  </div>
 <script>
  const ftok=n=>n>=1e9?(n/1e9).toFixed(1)+'B':n>=1e6?(n/1e6).toFixed(1)+'M':n>=1e3?(n/1e3).toFixed(1)+'k':''+n;
@@ -1112,12 +1188,15 @@ PAGE_MINI = r"""<!doctype html><html><head><meta charset="utf-8">
  let lastData=null;
  async function load(){
    try{ lastData=await (await fetch('/data')).json(); }catch(e){ return; }
-   const c=lastData.cards&&lastData.cards[0], x=lastData.cards&&lastData.cards[1];
+   const c=lastData.cards&&lastData.cards[0], x=lastData.cards&&lastData.cards[1], o=lastData.cards&&lastData.cards[2];
    const cp=sessionPct(c), xp=sessionPct(x);
+   const op=o&&o.oc?Math.min(100,o.oc.pct_used||0):null;
    document.getElementById('cp').textContent=cp==null?'--':cp+'%';
    document.getElementById('xp').textContent=xp==null?'--':xp+'%';
+   document.getElementById('op').textContent=op==null?'--':(o.oc.monthly&&o.oc.monthly.cost>0?'$'+o.oc.monthly.cost.toFixed(1):'--');
    document.getElementById('cf').style.width=(cp==null?0:cp)+'%';
    document.getElementById('xf').style.width=(xp==null?0:xp)+'%';
+   document.getElementById('of').style.width=(op==null?0:op)+'%';
  }
  // The native side resizes this window on hover; react to height change.
  function applySize(){
