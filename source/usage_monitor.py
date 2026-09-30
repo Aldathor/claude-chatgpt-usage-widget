@@ -119,7 +119,7 @@ def fmt_reset(seconds):
         s = 0
     d, h, m = s // 86400, (s % 86400) // 3600, (s % 3600) // 60
     if d > 0:
-        return f"{d}d {h}h"
+        return f"{d}d {h}h" if h else f"{d}d"
     if h > 0:
         return f"{h}h {m}m" if m else f"{h}h"
     return f"{m}m"
@@ -792,51 +792,55 @@ PAGE = r"""<!doctype html><html><head><meta charset="utf-8">
  body{margin:0;background:var(--bg);color:var(--ink);
       font-family:'Segoe UI',system-ui,-apple-system,Arial,sans-serif;
       font-size:14px;-webkit-user-select:none;user-select:none}
- .win{height:100vh;display:grid;grid-template-rows:56px minmax(0,1fr) 58px}
- header{display:flex;align-items:center;gap:6px;padding:0 12px 0 18px;background:var(--bg)}
- .brand{display:flex;align-items:center;gap:10px;padding:6px 4px;cursor:default}
+ .win{height:100vh;display:grid;grid-template-rows:auto 1fr}
+ header{height:50px;overflow:hidden;display:flex;align-items:center;gap:6px;padding:0 10px 0 16px;background:var(--bg)}
+ .brand{display:flex;align-items:center;gap:8px;padding:4px;cursor:default}
  .brand svg{display:block}
- .brand .t{font-size:19px;font-weight:700;letter-spacing:-.2px}
+ .brand .t{font-size:17px;font-weight:700;letter-spacing:-.2px}
  .dragspace{flex:1;align-self:stretch}
- .iconbtn{width:36px;height:36px;border:0;background:transparent;border-radius:9px;
+ .iconbtn{width:34px;height:34px;border:0;background:transparent;border-radius:8px;
           display:grid;place-items:center;color:var(--muted);cursor:pointer;padding:0}
  .iconbtn:hover{background:#e9edf2;color:var(--soft)}
- main{background:var(--white);display:flex;min-height:0;border-top:1px solid var(--line);
-      border-bottom:1px solid var(--line)}
- .col{flex:1 1 50%;min-width:0;padding:0 20px 16px;display:flex;flex-direction:column;
+ main{background:var(--white);display:flex;min-height:0;border-top:1px solid var(--line);position:relative}
+ .cols-wrap{display:flex;flex:1;min-height:0;width:100%}
+ .upd-pill{position:absolute;top:33%;left:50%;transform:translate(-50%,-50%);
+           background:var(--white);border:1px solid var(--line);border-radius:20px;
+           padding:4px 11px;display:flex;align-items:center;gap:5px;
+           font-size:11px;color:var(--faint);white-space:nowrap;z-index:2;
+           transition:opacity .2s ease;pointer-events:none}
+ .upd-pill b{color:var(--muted);font-weight:600}
+ .upd-pill.ui-out{opacity:0}
+ .col{flex:1 1 50%;min-width:0;padding:14px 14px 14px;display:flex;flex-direction:column;
       align-items:center;container-type:size}
  .col+.col{border-left:1px solid var(--line)}
- .chead{display:flex;align-items:center;gap:9px;padding-top:22px;margin-bottom:12px}
+ .chead{display:flex;align-items:center;gap:7px;margin-bottom:10px;width:100%}
  .cbody{width:100%;flex:1;min-height:0;display:flex;flex-direction:column;
-        align-items:center;justify-content:safe center}
- .chead .logo{display:grid;place-items:center}
- .logo svg{width:clamp(22px,9.4cqw,36px);height:auto;display:block}
- .chead .nm{font-size:clamp(15px,6.4cqw,23px);font-weight:700;letter-spacing:-.2px}
- .badge{font-size:clamp(9.5px,3.4cqw,13px);font-weight:600;border-radius:999px;padding:3px 10px}
+        align-items:center;justify-content:flex-start;gap:6px;padding-top:4px}
+ .chead .logo{display:grid;place-items:center;flex-shrink:0}
+ .logo svg{width:clamp(20px,8.5cqw,30px);height:auto;display:block}
+ .chead .nm{font-size:clamp(14px,5.8cqw,19px);font-weight:700;letter-spacing:-.2px}
+ .badge{font-size:11px;font-weight:600;border-radius:999px;padding:2px 9px;white-space:nowrap}
  .badge.claude{background:var(--cbg);color:var(--cfg)}
  .badge.gpt{background:var(--gbg);color:var(--gfg)}
- .ringwrap{position:relative;width:min(62cqw,52cqh,300px);aspect-ratio:1/1;margin-top:2px}
+ .ringwrap{position:relative;width:min(60cqw,160px);aspect-ratio:1/1}
  .ringwrap svg{display:block;width:100%;height:100%}
  .rcenter{position:absolute;inset:0;display:flex;flex-direction:column;
-          align-items:center;justify-content:center;gap:2px}
- .pct{font-size:clamp(20px,14.5cqw,56px);font-weight:700;letter-spacing:-1.5px;line-height:1}
- .left{font-size:clamp(10px,4.7cqw,18px);color:var(--muted)}
- .caption{margin-top:14px;font-size:clamp(10px,3.9cqw,15px);color:var(--faint)}
- .reset{text-align:center;color:var(--muted);font-size:clamp(11px,4.4cqw,17px);margin-top:3px;line-height:1.35}
- .reset b{display:block;color:var(--ink);font-size:clamp(13px,5.6cqw,22px);font-weight:700;letter-spacing:-.2px}
- .sec{margin-top:15px;width:min(60cqw,260px)}
- .sec .sbar{height:5px;border-radius:4px;background:var(--track);overflow:hidden}
+          align-items:center;justify-content:center;gap:1px}
+ .pct{font-size:clamp(26px,13.5cqw,48px);font-weight:700;letter-spacing:-1px;line-height:1}
+ .left{font-size:13px;color:var(--muted)}
+ .caption{font-size:12px;color:var(--faint);letter-spacing:.1px}
+ .reset{text-align:center;color:var(--muted);font-size:12px;line-height:1.4}
+ .reset b{display:block;color:var(--ink);font-size:clamp(16px,7cqw,22px);font-weight:700;letter-spacing:-.3px;margin-top:2px}
+ .sec{width:min(88cqw,220px)}
+ .sec .sbar{height:4px;border-radius:4px;background:var(--track);overflow:hidden}
  .sec .sfill{height:100%;border-radius:4px}
- .sec .st{margin-top:6px;text-align:center;font-size:clamp(9.5px,3.6cqw,14px);color:var(--muted)}
- .msg{padding:26px 12px;text-align:center;color:var(--muted);line-height:1.5;font-size:clamp(11.5px,4.2cqw,16px)}
- .cbtn{margin-top:12px;background:var(--blue);border:0;color:#fff;font-size:clamp(11px,4.2cqw,15px);
-       font-weight:600;border-radius:10px;padding:9px 18px;cursor:pointer}
+ .sec .st{margin-top:4px;text-align:center;font-size:12px;color:var(--muted)}
+ .msg{padding:20px 10px;text-align:center;color:var(--muted);line-height:1.5;font-size:13px}
+ .cbtn{margin-top:10px;background:var(--blue);border:0;color:#fff;font-size:13px;
+       font-weight:600;border-radius:10px;padding:8px 16px;cursor:pointer}
  .cbtn:disabled{opacity:.7;cursor:default}
- footer{display:flex;align-items:center;justify-content:space-between;
-        padding:0 20px;color:var(--muted);font-size:14.5px;background:var(--bg)}
- .upd{display:flex;align-items:center;gap:9px}
- .upd b{color:var(--soft);font-weight:600}
- .sp{display:flex;align-items:center;gap:8px}
+ header{transition:height .3s ease,opacity .2s ease}
+ header.ui-out{height:0!important;opacity:0;pointer-events:none}
  .panel{position:fixed;top:60px;right:12px;width:335px;background:#fff;border:1px solid #e6eaf0;
         border-radius:14px;box-shadow:0 18px 40px rgba(15,23,42,.16);padding:15px 16px;z-index:60;
         display:none}
@@ -884,18 +888,15 @@ PAGE = r"""<!doctype html><html><head><meta charset="utf-8">
     <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
   </button>
  </header>
- <main id="cols">
-   <div class="col" style="justify-content:center"><div class="msg">Loading…</div></div>
+ <main>
+  <div class="cols-wrap" id="cols">
+    <div class="col" style="justify-content:center"><div class="msg">Loading…</div></div>
+  </div>
+  <div class="upd-pill" id="upd-bar">
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v4.8l3.2 1.9"/></svg>
+    <b id="gen">—</b>
+  </div>
  </main>
- <footer>
-  <div class="upd">
-    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v4.8l3.2 1.9"/></svg>
-    <span>Updated <b id="gen">—</b></span>
-  </div>
-  <div class="sp"><span>Stay productive</span>
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.6c2.6 2.1 4 5.6 4 9.1 0 2.3-.7 4.5-1.9 6.2h-4.2C8.7 16.2 8 14 8 11.7c0-3.5 1.4-7 4-9.1z"/><circle cx="12" cy="10.2" r="1.7"/><path d="M8.3 15.2 5.6 18.9h2.8M15.7 15.2l2.7 3.7h-2.8"/><path d="M12 18.4v2.6"/></svg>
-  </div>
- </footer>
  <div class="panel" id="panel"></div>
  <div class="welcome" id="welcome"></div>
 </div>
@@ -1026,6 +1027,18 @@ PAGE = r"""<!doctype html><html><head><meta charset="utf-8">
  $('bmin').onclick=()=>{try{window.pywebview.api.minimize_win();}catch(e){}};
  $('bclose').onclick=()=>{try{window.pywebview.api.hide_win();}catch(e){}};
  $('bgear').onclick=togglePanel;
+ let _hideT=null;
+ function _showUI(){
+   document.querySelector('header').classList.remove('ui-out');
+   $('upd-bar').classList.remove('ui-out');
+   clearTimeout(_hideT);
+   _hideT=setTimeout(()=>{
+     document.querySelector('header').classList.add('ui-out');
+     $('upd-bar').classList.add('ui-out');
+   },10000);
+ }
+ ['mousemove','mousedown','keydown','touchstart'].forEach(ev=>document.addEventListener(ev,_showUI,{passive:true}));
+ _showUI();
  document.addEventListener('mousedown',e=>{
    if(panel.classList.contains('open')&&!panel.contains(e.target)&&!e.target.closest('#bgear'))closePanel();
  });
@@ -1045,28 +1058,12 @@ PAGE_MINI = r"""<!doctype html><html><head><meta charset="utf-8">
  html,body{margin:0;height:100vh;overflow:hidden;background:transparent;
    font-family:'Segoe UI',system-ui,Arial,sans-serif;user-select:none}
  body{position:relative}
- /* full flyout panel - opens ABOVE the bar on hover (bottom set to bar height in JS) */
- #full{position:absolute;left:0;right:0;top:0;bottom:__BARH__px;overflow:auto;display:none;
-   background:var(--bg);color:var(--ink);border-radius:10px 10px 0 0;padding:8px 10px;
-   box-shadow:0 -2px 14px rgba(0,0,0,.28)}
+ /* full flyout panel - opens ABOVE the bar on hover */
+ #full{position:absolute;left:0;right:0;top:0;bottom:__BARH__px;display:none;
+   border-radius:10px 10px 0 0;overflow:hidden;
+   box-shadow:0 -4px 20px rgba(0,0,0,.25)}
  body.open #full{display:block}
- .cap{font-weight:600;font-size:10px;color:var(--muted);text-transform:uppercase;
-   letter-spacing:.3px;margin:0 0 4px}
- .prov{margin-bottom:8px}
- .ptitle{display:flex;align-items:center;gap:6px;padding:2px 2px 5px}
- .pname{font-weight:700;font-size:13px;color:var(--ink)}
- .plan{background:#e2e8f5;color:#4b5b78;font-size:9px;font-weight:600;padding:1px 6px;border-radius:8px}
- .card{background:var(--card);border-radius:10px;padding:8px 10px}
- .limit{margin-bottom:6px}
- .ltitle{font-weight:600;font-size:11px;margin-bottom:2px}
- .bar{height:5px;background:var(--track);border-radius:5px;overflow:hidden}
- .fill{height:100%;background:var(--fill)}
- .lmeta{display:flex;justify-content:space-between;margin-top:2px;font-size:10px}
- .lreset{color:var(--reset)}
- .sep{height:1px;background:var(--line);margin:6px 0}
- .urow{display:flex;justify-content:space-between;font-size:11px;padding:1px 0}
- .uval{color:var(--muted)}
- .note{color:var(--muted);font-size:10px;padding:2px 0}
+ #full iframe{width:100%;height:100%;border:none;display:block}
  /* compact bar - fills the whole window at rest (so it stays visible whatever
     height Windows actually gives us); shrinks to the bottom strip when open */
  #compact{position:absolute;left:0;right:0;top:0;bottom:0;
@@ -1098,30 +1095,9 @@ PAGE_MINI = r"""<!doctype html><html><head><meta charset="utf-8">
  function api(){ return (window.pywebview && window.pywebview.api) || null; }
  let expanded=false, dragging=false, sx=0, startLeft=0, dpr=1, pending=null, raf=0;
  function sessionPct(card){
-   if(!card||!card.limits) return null;
+   if(!card||!card.limits||!card.limits.length) return null;
    const s=card.limits.find(l=>/session/i.test(l.label));
-   return s?s.percent_left:null;
- }
- function fullCard(c){
-   let h='<div class="prov"><div class="ptitle"><span class="pname">'+c.name+'</span>'+
-     (c.plan?('<span class="plan">'+c.plan+'</span>'):'')+'</div><div class="card">';
-   if(c.limits&&c.limits.length){
-     h+='<div class="cap">Usage limit</div>';
-     for(const l of c.limits){
-       h+='<div class="limit"><div class="ltitle">'+l.label+'</div>'+
-          '<div class="bar"><div class="fill" style="width:'+l.percent_left+'%"></div></div>'+
-          '<div class="lmeta"><span>'+l.percent_left+'% left</span><span class="lreset">'+
-          (l.resets?('Resets in '+l.resets):'')+'</span></div></div>';
-     }
-     h+='<div class="sep"></div>';
-   } else if(c.hint){ h+='<div class="note">'+(NOTE[c.hint]||'')+'</div>'; }
-   h+='<div class="cap">Tokens used</div>';
-   for(const k of ['Today','Yesterday','Last 30 Days']){
-     const u=c.usage&&c.usage[k]; if(!u) continue;
-     const v=(u.tokens>0)?(ftok(u.tokens)+' tokens'):'—';
-     h+='<div class="urow"><span>'+k+'</span><span class="uval">'+v+'</span></div>';
-   }
-   return h+'</div></div>';
+   return s?s.percent_left:card.limits[0].percent_left;
  }
  let lastData=null;
  async function load(){
@@ -1132,31 +1108,42 @@ PAGE_MINI = r"""<!doctype html><html><head><meta charset="utf-8">
    document.getElementById('xp').textContent=xp==null?'--':xp+'%';
    document.getElementById('cf').style.width=(cp==null?0:cp)+'%';
    document.getElementById('xf').style.width=(xp==null?0:xp)+'%';
-   if(expanded) document.getElementById('full').innerHTML=lastData.cards.map(fullCard).join('');
  }
- // The native side resizes this window on hover (cursor-driven); the page just
- // reacts to its own height to show/hide the full panel. No mouse events needed.
+ // The native side resizes this window on hover; react to height change.
  function applySize(){
    const big = window.innerHeight > 100;
    if(big && !expanded){
      expanded=true;
-     if(lastData) document.getElementById('full').innerHTML=lastData.cards.map(fullCard).join('');
+     document.getElementById('full').innerHTML='<iframe src="/"></iframe>';
      document.body.classList.add('open');
    } else if(!big && expanded){
      expanded=false;
+     document.getElementById('full').innerHTML='';
      document.body.classList.remove('open');
    }
  }
  window.addEventListener('resize', applySize);
  setInterval(applySize, 150);
  const compact=document.getElementById('compact');
- compact.addEventListener('mousedown', async e=>{
+ let _mdX=0,_mdY=0,_mdMoved=false;
+ compact.addEventListener('mousedown', e=>{
    if(e.button!==0) return;
+   _mdX=e.screenX; _mdY=e.screenY; _mdMoved=false;
+ });
+ compact.addEventListener('mousemove', e=>{
+   if(Math.abs(e.screenX-_mdX)>4||Math.abs(e.screenY-_mdY)>4) _mdMoved=true;
+ });
+ compact.addEventListener('mouseup', async e=>{
+   if(e.button!==0) return;
+   if(!_mdMoved){
+     const a=api(); if(a) try{ a.show_main(); }catch(err){}
+     return;
+   }
    const a=api(); if(!a) return;
    let r; try{ r=await a.begin_drag(); }catch(err){ return; }
-   if(!r || r[2]) return;                 // locked (via tray) -> no drag
+   if(!r || r[2]) return;
    expanded=false; document.body.classList.remove('open');
-   dragging=true; sx=e.screenX; startLeft=r[0]; dpr=r[1]||1;
+   dragging=true; sx=_mdX; startLeft=r[0]; dpr=r[1]||1;
  });
  function flush(){ raf=0; if(pending!=null){ const a=api(); if(a) a.drag_to(pending); } }
  window.addEventListener('mousemove', e=>{
@@ -1368,16 +1355,14 @@ def other_instance_running():
     return False
 
 
-def show_request_watcher(window):
-    """Daemon thread in the running instance: each time a second launch signals
-    the show-event, bring the main window back (same as tray -> Open)."""
+def show_request_watcher(mini):
+    """Daemon thread: a second launch signals the show-event → toggle the mini widget."""
     while _K32 and _show_event:
         _K32.WaitForSingleObject(_show_event, 0xFFFFFFFF)
         if _quitting:
             return
         try:
-            window.show()
-            window.restore()
+            mini.show()
         except Exception:
             pass
 
@@ -1566,6 +1551,7 @@ class MiniController:
 
     def __init__(self):
         self._window = None       # pywebview window (used only for show/hide)
+        self._main_window = None
         self._visible = False
         self._x = None            # desired compact LEFT in physical px (None = default)
         self._expanded = False
@@ -1613,6 +1599,17 @@ class MiniController:
 
     def toggle(self):
         self.hide() if self._visible else self.show()
+
+    def show_main(self):
+        if self._main_window:
+            try:
+                self._main_window.show()
+                self._main_window.restore()
+            except Exception:
+                pass
+
+    def bind_main(self, window):
+        self._main_window = window
 
     # --- geometry helpers (physical px, taskbar coordinate space) ---
     def _default_x(self, tb, scale):
@@ -1696,13 +1693,6 @@ def build_tray(main_window, mini):
     except Exception:
         image = Image.new("RGBA", (64, 64), (59, 130, 246, 255))
 
-    def on_open(icon, item):
-        try:
-            main_window.show()
-            main_window.restore()
-        except Exception:
-            pass
-
     def on_toggle(icon, item):
         mini.toggle()
 
@@ -1713,8 +1703,8 @@ def build_tray(main_window, mini):
         request_exit(icon, main_window, mini)
 
     menu = pystray.Menu(
-        pystray.MenuItem("Open", on_open, default=True),
-        pystray.MenuItem("Taskbar widget", on_toggle, checked=lambda item: mini.visible),
+        pystray.MenuItem("Show / Hide widget", on_toggle, default=True,
+                         checked=lambda item: mini.visible),
         pystray.MenuItem("Lock widget position", on_lock,
                          checked=lambda item: get_mini_settings()["locked"]),
         pystray.Menu.SEPARATOR,
@@ -1735,12 +1725,11 @@ def request_exit(icon, main_window, mini):
             icon.stop()
     except Exception:
         pass
-    for w in (mini._window if mini else None, main_window):
-        try:
-            if w:
-                w.destroy()
-        except Exception:
-            pass
+    try:
+        if mini and mini._window:
+            mini._window.destroy()
+    except Exception:
+        pass
 
 
 def main():
@@ -1765,22 +1754,7 @@ def main():
         webview = None
     if webview is not None:
         try:
-            sw, sh = primary_screen_size()
-            init_h = (max(WINDOW_MIN_HEIGHT, min(int(sh * WINDOW_FRACTION), WINDOW_MAX_HEIGHT))
-                      if sh else WINDOW_HEIGHT)
             global _tray_active
-            api = WinApi()
-            window = webview.create_window("AI Usage Monitor", url,
-                                           width=WINDOW_WIDTH, height=init_h,
-                                           resizable=True, on_top=ALWAYS_ON_TOP,
-                                           frameless=True, easy_drag=False,
-                                           background_color="#f6f7f9",
-                                           js_api=api)
-            api.bind(window)
-
-            # taskbar-overlay mini gadget. Its final geometry is driven by the
-            # Win32 dock loop (physical px, DPI-correct); the create_window values
-            # are just a small initial placeholder that gets snapped within ~1s.
             ms = get_mini_settings()
             mini = MiniController()
             mini_window = webview.create_window("AI Usage (mini)", url + "/mini",
@@ -1788,50 +1762,22 @@ def main():
                                                 x=120, y=120, frameless=True,
                                                 on_top=True, resizable=False,
                                                 easy_drag=False, focus=False,
-                                                # pywebview's default min_size (200x100 logical) is
-                                                # enforced by Windows even against raw SetWindowPos,
-                                                # so the compact bar could never reach its real size
                                                 min_size=(1, 1),
                                                 background_color="#1e2025",
                                                 hidden=(not ms["enabled"]), js_api=mini)
             mini.bind(mini_window, ms["enabled"], ms["x"])
             threading.Thread(target=taskbar_dock_loop, args=(mini,), daemon=True).start()
-            threading.Thread(target=show_request_watcher, args=(window,),
+            threading.Thread(target=show_request_watcher, args=(mini,),
                              daemon=True).start()
-
-            # X on the main window minimizes to the tray. But if the tray failed
-            # to start, closing must FULLY quit (destroy the hidden mini too) so
-            # the app can never get stuck running with no visible window.
-            def on_closing():
-                global _quitting
-                if _quitting:
-                    return True
-                if _tray_active:
-                    try:
-                        window.hide()
-                    except Exception:
-                        pass
-                    return False
-                _quitting = True
-                try:
-                    mini_window.destroy()
-                except Exception:
-                    pass
-                return True
-            try:
-                window.events.closing += on_closing
-            except Exception:
-                pass
 
             icon = None
             try:
-                icon = build_tray(window, mini)
+                icon = build_tray(None, mini)
                 icon.run_detached()
                 _tray_active = True
             except Exception:
                 icon = None
 
-            threading.Thread(target=round_main_window, daemon=True).start()
             webview.start()
             try:
                 if icon:
