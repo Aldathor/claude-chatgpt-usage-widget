@@ -7,6 +7,7 @@ Built on [halimadmech/ai-usage-monitor](https://github.com/halimadmech/ai-usage-
 - **Custom ring dashboard** — light UI with a donut ring per service (`% left`, reset countdown), plan badge, and a "Stay productive" footer
 - **Pinned always-on-top** (`ALWAYS_ON_TOP = True`) — the main window stays in front of all other apps while open
 - **Frameless window with custom header** — drag it by the header; gear = settings panel (tokens, refresh, sign out); `—` minimizes; `✕` closes to the tray
+- **Resizable & fully responsive** — drag any edge or corner; the rings, fonts and layout scale fluidly to the window size
 - Taskbar mini strip is unchanged (two lines, hover to expand)
 
 ## Setup on a new computer

@@ -803,30 +803,33 @@ PAGE = r"""<!doctype html><html><head><meta charset="utf-8">
  .iconbtn:hover{background:#e9edf2;color:var(--soft)}
  main{background:var(--white);display:flex;min-height:0;border-top:1px solid var(--line);
       border-bottom:1px solid var(--line)}
- .col{flex:1 1 50%;min-width:0;padding:24px 20px 18px;display:flex;flex-direction:column;
-      align-items:center}
+ .col{flex:1 1 50%;min-width:0;padding:0 20px 16px;display:flex;flex-direction:column;
+      align-items:center;container-type:size}
  .col+.col{border-left:1px solid var(--line)}
- .chead{display:flex;align-items:center;gap:9px;margin-bottom:15px}
+ .chead{display:flex;align-items:center;gap:9px;padding-top:22px;margin-bottom:12px}
+ .cbody{width:100%;flex:1;min-height:0;display:flex;flex-direction:column;
+        align-items:center;justify-content:safe center}
  .chead .logo{display:grid;place-items:center}
- .chead .nm{font-size:21px;font-weight:700;letter-spacing:-.2px}
- .badge{font-size:12px;font-weight:600;border-radius:999px;padding:3px 10px}
+ .logo svg{width:clamp(22px,9.4cqw,36px);height:auto;display:block}
+ .chead .nm{font-size:clamp(15px,6.4cqw,23px);font-weight:700;letter-spacing:-.2px}
+ .badge{font-size:clamp(9.5px,3.4cqw,13px);font-weight:600;border-radius:999px;padding:3px 10px}
  .badge.claude{background:var(--cbg);color:var(--cfg)}
  .badge.gpt{background:var(--gbg);color:var(--gfg)}
- .ringwrap{position:relative;width:198px;height:198px;margin-top:2px}
+ .ringwrap{position:relative;width:min(62cqw,52cqh,300px);aspect-ratio:1/1;margin-top:2px}
  .ringwrap svg{display:block;width:100%;height:100%}
  .rcenter{position:absolute;inset:0;display:flex;flex-direction:column;
           align-items:center;justify-content:center;gap:2px}
- .pct{font-size:46px;font-weight:700;letter-spacing:-1.5px;line-height:1}
- .left{font-size:15px;color:var(--muted)}
- .caption{margin-top:14px;font-size:12.5px;color:var(--faint)}
- .reset{text-align:center;color:var(--muted);font-size:14px;margin-top:3px;line-height:1.35}
- .reset b{display:block;color:var(--ink);font-size:18px;font-weight:700;letter-spacing:-.2px}
- .sec{margin-top:15px;width:190px}
+ .pct{font-size:clamp(20px,14.5cqw,56px);font-weight:700;letter-spacing:-1.5px;line-height:1}
+ .left{font-size:clamp(10px,4.7cqw,18px);color:var(--muted)}
+ .caption{margin-top:14px;font-size:clamp(10px,3.9cqw,15px);color:var(--faint)}
+ .reset{text-align:center;color:var(--muted);font-size:clamp(11px,4.4cqw,17px);margin-top:3px;line-height:1.35}
+ .reset b{display:block;color:var(--ink);font-size:clamp(13px,5.6cqw,22px);font-weight:700;letter-spacing:-.2px}
+ .sec{margin-top:15px;width:min(60cqw,260px)}
  .sec .sbar{height:5px;border-radius:4px;background:var(--track);overflow:hidden}
  .sec .sfill{height:100%;border-radius:4px}
- .sec .st{margin-top:6px;text-align:center;font-size:11.5px;color:var(--muted)}
- .msg{padding:26px 12px;text-align:center;color:var(--muted);line-height:1.5;font-size:13.5px}
- .cbtn{margin-top:12px;background:var(--blue);border:0;color:#fff;font-size:13.5px;
+ .sec .st{margin-top:6px;text-align:center;font-size:clamp(9.5px,3.6cqw,14px);color:var(--muted)}
+ .msg{padding:26px 12px;text-align:center;color:var(--muted);line-height:1.5;font-size:clamp(11.5px,4.2cqw,16px)}
+ .cbtn{margin-top:12px;background:var(--blue);border:0;color:#fff;font-size:clamp(11px,4.2cqw,15px);
        font-weight:600;border-radius:10px;padding:9px 18px;cursor:pointer}
  .cbtn:disabled{opacity:.7;cursor:default}
  footer{display:flex;align-items:center;justify-content:space-between;
@@ -932,7 +935,7 @@ PAGE = r"""<!doctype html><html><head><meta charset="utf-8">
    const name=isClaude?'Claude':'ChatGPT';
    let badge=c.plan||'';if(!isClaude)badge=badge.replace(/^ChatGPT\s+/i,'');
    let h='<div class="col"><div class="chead">'+(isClaude?CLAUDE_SVG:OPENAI_SVG)+
-     '<span class="nm">'+name+'</span>'+(badge?('<span class="badge '+(isClaude?'claude':'gpt')+'">'+badge+'</span>'):'')+'</div>';
+     '<span class="nm">'+name+'</span>'+(badge?('<span class="badge '+(isClaude?'claude':'gpt')+'">'+badge+'</span>'):'')+'</div><div class="cbody">';
    const ls=c.limits||[];
    let main=null,second=null;
    if(isClaude){main=ls.find(l=>/session/i.test(l.label))||ls[0]||null;
@@ -949,7 +952,7 @@ PAGE = r"""<!doctype html><html><head><meta charset="utf-8">
        h+='<button class="cbtn" onclick="connectClaude(this)">Connect Claude</button>';
      }
    }
-   return h+'</div>';
+   return h+'</div></div>';
  }
  async function connectClaude(btn){
    btn.disabled=true;btn.textContent='Opening sign-in…';
@@ -1002,28 +1005,11 @@ PAGE = r"""<!doctype html><html><head><meta charset="utf-8">
    if(nextSecs!=null){nextSecs=Math.max(0,nextSecs-1);
      const el=$('pcd');if(el)el.textContent=fmtCd(nextSecs);}
  }
- function scaleToFit(){
-   try{
-     document.body.style.zoom='1';
-     const avail=window.innerHeight;
-     const content=document.documentElement.scrollHeight;
-     let z=(content>avail)?(avail/content):1;
-     z=Math.max(0.5,Math.min(1,z*0.99));
-     document.body.style.zoom=(z>=0.999?'':z);
-   }catch(e){}
- }
  function fitWidget(){
    try{
      const api=window.pywebview&&window.pywebview.api;
-     if(api&&api.set_height&&!sized){
-       sized=true;
-       const h=Math.max(470,Math.min(640,Math.round(window.innerWidth/1.152)));
-       api.set_height(h);
-       setTimeout(scaleToFit,170);
-       return;
-     }
-     scaleToFit();
-   }catch(e){scaleToFit();}
+     if(api&&api.set_height&&!sized){sized=true;api.set_height(556);}
+   }catch(e){}
  }
  async function load(){
    try{
@@ -1507,7 +1493,8 @@ def taskbar_dock_loop(mini):
 
 
 def round_main_window():
-    """Give the frameless main window rounded corners (Windows 11)."""
+    """Frameless main window: add an invisible resize border (WS_THICKFRAME)
+    so the user can drag its edges, and rounded corners (Windows 11)."""
     if not _WIN:
         return
     try:
@@ -1515,14 +1502,25 @@ def round_main_window():
         _DWM.DwmSetWindowAttribute.restype = ctypes.c_long
         _DWM.DwmSetWindowAttribute.argtypes = [wintypes.HWND, ctypes.c_uint,
                                               ctypes.c_void_p, ctypes.c_uint]
+        h = None
         for _ in range(240):
             h = _WIN.FindWindowW(None, "AI Usage Monitor")
             if h:
+                break
+            time.sleep(0.25)
+        if not h:
+            return
+        for _ in range(20):   # WinForms may rebuild the handle after we touch
+            st = _GETL(h, _GWL_STYLE)          # the styles, so re-assert a bit
+            if not (st & _WS_THICKFRAME):
+                _SETL(h, _GWL_STYLE, st | _WS_THICKFRAME)
+                _WIN.SetWindowPos(h, 0, 0, 0, 0, 0,
+                                  _SWP_FRAMECHANGED | _SWP_NOMOVE | _SWP_NOSIZE
+                                  | _SWP_NOZORDER | _SWP_NOACTIVATE)
                 pref = ctypes.c_int(2)   # DWMWCP_ROUND
                 _DWM.DwmSetWindowAttribute(h, 33, ctypes.byref(pref),
                                            ctypes.sizeof(pref))
-                return
-            time.sleep(0.25)
+            time.sleep(0.5)
     except Exception:
         pass
 
@@ -1774,7 +1772,7 @@ def main():
             api = WinApi()
             window = webview.create_window("AI Usage Monitor", url,
                                            width=WINDOW_WIDTH, height=init_h,
-                                           resizable=False, on_top=ALWAYS_ON_TOP,
+                                           resizable=True, on_top=ALWAYS_ON_TOP,
                                            frameless=True, easy_drag=False,
                                            background_color="#f6f7f9",
                                            js_api=api)
