@@ -1,40 +1,63 @@
-# AI Usage Widget (Claude + ChatGPT/Codex)
+# AI Usage Widget
 
-Portable Windows widget showing usage limits for **Claude** (5h session + weekly) and **ChatGPT/Codex** (weekly) at a glance, plus local token counts.
+A compact Windows desktop widget that shows your **Claude** and **ChatGPT / Codex** usage at a glance — live limit rings, reset countdowns, and weekly/monthly token counts, all in a tiny taskbar bar that expands on hover.
 
-Built on [halimadmech/ai-usage-monitor](https://github.com/halimadmech/ai-usage-monitor) (MIT). This repo carries a custom build of `AIUsage.exe`:
+![Widget preview](https://github.com/Aldathor/claude-chatgpt-usage-widget/assets/preview.png)
 
-- **Custom ring dashboard** — light UI with a donut ring per service (`% left`, reset countdown), plan badge, and a "Stay productive" footer
-- **Pinned always-on-top** (`ALWAYS_ON_TOP = True`) — the main window stays in front of all other apps while open
-- **Frameless window with custom header** — drag it by the header; gear = settings panel (tokens, refresh, sign out); `—` minimizes; `✕` closes to the tray
-- **Resizable & fully responsive** — drag any edge or corner; the rings, fonts and layout scale fluidly to the window size
-- Taskbar mini strip is unchanged (two lines, hover to expand)
+---
 
-## Setup on a new computer
+## Features
 
-1. Clone this repo
-2. Make sure you're signed in to:
-   - **Claude Code** (or have the Claude desktop app) — required for the Claude numbers
-   - **Codex CLI** — required for the ChatGPT numbers
-3. Double-click `AIUsage.exe`
-   - On first run, if the Claude ring asks, click **Connect Claude** from that machine
-   - Windows may show "Windows protected your PC" → More info → Run anyway (unsigned binary, source is public)
-4. Drag the window by its header to where you want it; the taskbar strip can be dragged to a free spot and locked from the tray icon
+- **Mini taskbar bar** — always-on-top, two-line bar (Claude % · Codex %) that stays out of your way
+- **Hover to expand** — flies up to show full usage rings, reset timers, and token stats
+- **Claude limits** — session and weekly limits pulled from Claude Code's local OAuth token (covers all Claude apps: chat, Cowork, Code, CLI)
+- **Codex limits** — weekly usage read from the Codex CLI's local logs
+- **Token counts** — weekly (7-day) and monthly (30-day) token totals per provider, sourced from local session logs
+- **Auto-hide chrome** — header fades and collapses after 10 s of inactivity; reappears on any interaction
+- **Drag to reposition** — click-drag the compact bar anywhere along the taskbar edge
+- **System tray icon** — show/hide or quit from the tray
 
-## Notes
+---
 
-- The big ring shows the **5h session** for Claude and the **weekly** window for ChatGPT; Claude's weekly is the small bar under the ring
-- Reads usage only; no API credits are consumed
-- Data stays local — the only network calls go to Anthropic/OpenAI for your own usage numbers
-- The ChatGPT account is on the "prolite" plan, which has **no 5-hour Codex window** — only the weekly ring will populate
+## Requirements
 
-## Rebuilding from source
+- Windows 10/11 (WebView2 runtime — included with Windows 11; install from Microsoft if missing on Win 10)
+- [Claude Code](https://claude.ai/code) installed and signed in (for Claude limits)
+- [Codex CLI](https://github.com/openai/codex) installed and signed in (for Codex limits)
 
-`source/usage_monitor.py` is the full patched app (single file). With Python 3 + the build tools:
+---
 
+## Usage
+
+Download `AIUsage.exe` from the [latest release](https://github.com/Aldathor/claude-chatgpt-usage-widget/releases) and run it. No install needed.
+
+- **Hover** the compact bar to expand the full view
+- **Click** the compact bar (without dragging) to open the settings panel
+- **Drag** the bar to reposition it
+- **Right-click the tray icon** to show/hide or quit
+
+---
+
+## Build from source
+
+```bash
+pip install pywebview pystray pillow
+pyinstaller --onefile --windowed --name AIUsage --icon source/app.ico \
+  --hidden-import=webview --hidden-import=pystray \
+  --hidden-import=PIL --hidden-import=PIL.Image \
+  source/usage_monitor.py
 ```
-py -m pip install pyinstaller pywebview pystray pillow
-py -m PyInstaller --onefile --windowed --name AIUsage --icon app.ico --add-data "app.ico;." --hidden-import pystray._win32 usage_monitor.py
-```
 
-Upstream MIT license included as `source/LICENSE-upstream`.
+Single file, no external assets needed — all HTML/CSS/JS is embedded in `usage_monitor.py`.
+
+---
+
+## Data & privacy
+
+All data stays on your machine. The only outbound call is to Claude's usage endpoint using **your own OAuth token** (the same one Claude Code uses). No telemetry, no third-party services.
+
+---
+
+## License
+
+MIT
