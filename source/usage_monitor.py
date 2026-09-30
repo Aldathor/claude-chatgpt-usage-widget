@@ -60,7 +60,7 @@ ALWAYS_ON_TOP = True          # True pins the window above others, widget-style
 MINI_WIDTH = 184
 MINI_BAR_HEIGHT = 40
 MINI_EXPANDED_WIDTH = 380
-MINI_EXPANDED_HEIGHT = 520
+MINI_EXPANDED_HEIGHT = 378
 
 # Claude usage endpoint (the same one Claude Code uses). The User-Agent header
 # is REQUIRED; without it the endpoint hard rate-limits. Poll no faster than
@@ -729,6 +729,7 @@ def _usage_rows(events, now):
     today = now.astimezone().date()
     yest = today - timedelta(days=1)
     cutoff30 = now - timedelta(days=30)
+    cutoff7 = now - timedelta(days=7)
 
     def bucket(pred):
         toks = 0
@@ -740,6 +741,7 @@ def _usage_rows(events, now):
     return {
         "Today": bucket(lambda ts: ts is not None and ts.astimezone().date() == today),
         "Yesterday": bucket(lambda ts: ts is not None and ts.astimezone().date() == yest),
+        "Last 7 Days": bucket(lambda ts: ts is not None and ts >= cutoff7),
         "Last 30 Days": bucket(lambda ts: ts is not None and ts >= cutoff30),
     }
 
@@ -835,6 +837,9 @@ PAGE = r"""<!doctype html><html><head><meta charset="utf-8">
  .sec .sbar{height:4px;border-radius:4px;background:var(--track);overflow:hidden}
  .sec .sfill{height:100%;border-radius:4px}
  .sec .st{margin-top:4px;text-align:center;font-size:12px;color:var(--muted)}
+ .tok{width:100%;border-top:1px solid var(--line);padding-top:7px;margin-top:2px}
+ .tokrow{display:flex;justify-content:space-between;align-items:center;font-size:11.5px;color:var(--muted);line-height:1.7}
+ .tokrow b{color:var(--ink);font-weight:700;font-size:12px}
  .msg{padding:20px 10px;text-align:center;color:var(--muted);line-height:1.5;font-size:13px}
  .cbtn{margin-top:10px;background:var(--blue);border:0;color:#fff;font-size:13px;
        font-weight:600;border-radius:10px;padding:8px 16px;cursor:pointer}
@@ -953,6 +958,11 @@ PAGE = r"""<!doctype html><html><head><meta charset="utf-8">
        h+='<button class="cbtn" onclick="connectClaude(this)">Connect Claude</button>';
      }
    }
+   const u=c.usage||{};
+   const tw=(u['Last 7 Days']&&u['Last 7 Days'].tokens>0)?ftok(u['Last 7 Days'].tokens):'—';
+   const tm=(u['Last 30 Days']&&u['Last 30 Days'].tokens>0)?ftok(u['Last 30 Days'].tokens):'—';
+   h+='<div class="tok"><div class="tokrow"><span>Weekly</span><b>'+tw+'</b></div>'+
+      '<div class="tokrow"><span>Monthly</span><b>'+tm+'</b></div></div>';
    return h+'</div></div>';
  }
  async function connectClaude(btn){
